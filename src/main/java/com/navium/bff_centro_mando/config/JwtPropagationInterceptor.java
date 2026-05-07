@@ -12,27 +12,28 @@ import jakarta.servlet.http.HttpServletRequest;
 
 import java.io.IOException;
 
+// Interceptor que copia el JWT de la solicitud entrante a las solicitudes salientes.
 @Component
 public class JwtPropagationInterceptor  implements ClientHttpRequestInterceptor {
 
     @Override
     public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException { 
 
-        // Capturamos la peticion original que el usuario le hizo al BFF
+        // Captura la peticion original que el usuario le hizo al BFF.
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         
         if (attributes != null) { 
             HttpServletRequest originalRequest = attributes.getRequest();
-            // Extraemos el Token de la cabecera Authorization
+            // Extrae el token de la cabecera Authorization.
             String authHeader = originalRequest.getHeader(HttpHeaders.AUTHORIZATION);
 
-            // Si hay un token valido, lo propagamos a la nueva solicitud
+            // Si hay un token valido, lo propaga a la solicitud saliente.
             if (authHeader != null && authHeader.startsWith("Bearer ")) { 
                 request.getHeaders().add(HttpHeaders.AUTHORIZATION, authHeader);
             }
         }
 
-        // Dejamos que la peticion continue
+        // Deja que la peticion continue hacia el microservicio.
         return execution.execute(request, body);
     }
 

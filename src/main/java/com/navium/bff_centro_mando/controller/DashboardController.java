@@ -8,19 +8,20 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+// Controlador REST que expone el endpoint del dashboard.
 @RestController
-@RequestMapping("/api/v0/dashboard")
+@RequestMapping("/api/dashboard")
 public class DashboardController {
     
-    // el Final garantiza que el campo no puede ser modificado.
+    // Servicio de negocio que arma la vista del dashboard.
     private final CentroMandoService service;
 
-
-    
+    // Inyecta el servicio para orquestar llamadas a microservicios.
     public DashboardController(CentroMandoService service) { 
         this.service = service;
     }
 
+    // Endpoint principal del dashboard con el estado de las operaciones.
     @GetMapping("/operaciones")
     public ResponseEntity<List<DashboardOperacionResponse>> verTablero() { 
         return ResponseEntity.ok(service.obtenerTableroPrincipal());

@@ -5,6 +5,8 @@ import java.time.LocalDateTime;
 
 @Data
 public class AgendamientoResponse {
+    // DTO que representa la respuesta del ms-agendamiento.
+    // Si el microservicio cambia el formato, se ajusta aqui sin tocar la logica del BFF.
 
     private Long id;
     private String usuarioId;
@@ -14,12 +16,7 @@ public class AgendamientoResponse {
     private LocalDateTime bloqueInicio;
     private LocalDateTime bloqueFin;
 
-
-    // Nota: Los enums es mejor recibirlos como strings en bff.
-    // Evitando tener que copiar los archivos de enums en el proyecto y mantenemos los microservicios desacoplados.
-    
-    private String tipoOperacion;
-    private String estado;
-
-
+    // Nota: los enums se reciben como string para evitar acoplarse a enums de otros microservicios.
+    private String tipoOperacion; // Se pasa a string
+    private String estado; // Se pasa a string
 }
