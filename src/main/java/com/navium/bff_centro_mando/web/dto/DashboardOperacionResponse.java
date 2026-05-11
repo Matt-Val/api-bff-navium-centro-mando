@@ -15,4 +15,6 @@ public class DashboardOperacionResponse {
 
     private String codigoContenedor;
     private String estadoContenedor;
+
+    private String andenAsignado;
 }

@@ -13,6 +13,7 @@ public class AgendamientoResponse {
     private String patenteCamion;
     private String rutChofer;
     private String idContenedor;
+    private String codigoAnden;
     private LocalDateTime bloqueInicio;
     private LocalDateTime bloqueFin;
 

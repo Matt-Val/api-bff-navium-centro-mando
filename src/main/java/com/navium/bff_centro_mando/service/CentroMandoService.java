@@ -1,8 +1,10 @@
 package com.navium.bff_centro_mando.service;
 
 import com.navium.bff_centro_mando.client.AgendamientoClient;
+import com.navium.bff_centro_mando.client.AndenesClient;
 import com.navium.bff_centro_mando.client.ContenedoresClient;
 import com.navium.bff_centro_mando.client.dto.AgendamientoResponse;
+import com.navium.bff_centro_mando.client.dto.AndenResponse;
 import com.navium.bff_centro_mando.client.dto.ContenedorResponse;
 import com.navium.bff_centro_mando.web.dto.DashboardOperacionResponse;
 import org.springframework.stereotype.Service;
@@ -18,44 +20,57 @@ public class CentroMandoService {
     private final AgendamientoClient agendamientoClient;
     // Cliente para obtener estados de contenedores.
     private final ContenedoresClient contenedoresClient;
+    // Cliente para obtener andenes.
+    private final AndenesClient andenesClient;
+
 
     // Inyecta los clientes necesarios para construir la vista del dashboard.
-    public CentroMandoService(AgendamientoClient agendamientoClient, ContenedoresClient contenedoresClient) { 
-        this.agendamientoClient = agendamientoClient;
-        this.contenedoresClient = contenedoresClient;
+    public CentroMandoService(
+        AgendamientoClient agendamientoClient, 
+        ContenedoresClient contenedoresClient,
+        AndenesClient andenesClient) { 
+            this.agendamientoClient = agendamientoClient;
+            this.contenedoresClient = contenedoresClient;
+            this.andenesClient = andenesClient;
     }
+
 
     // Construye la lista de operaciones combinando agendamientos y contenedores.
     public List<DashboardOperacionResponse> obtenerTableroPrincipal() {
-        // 1. Llama al ms-agendamiento para obtener turnos.
         List<AgendamientoResponse> agendamientos = agendamientoClient.obtenerTodosLosAgendamientos().join();
-        
-        // 2. Llama al ms-contenedores para obtener el estado real.
         List<ContenedorResponse> todosLosContenedores = contenedoresClient.obtenerTodosLosContenedores().join();
+        List<AndenResponse> todosLosAndenes = andenesClient.obtenerTodosLosAndenes().join();
 
-        // 3. Mezcla los datos y arma la respuesta del dashboard.
         return agendamientos.stream().map(turno -> {
-            
-            // Busca el contenedor que coincida con el agendamiento.
+
+            // Busca el contenedor
             String estadoContenedorReal = "DESCONOCIDO";
             if (turno.getIdContenedor() != null) {
                 estadoContenedorReal = todosLosContenedores.stream()
-                        .filter(c -> c.getCodigoSigla().equals(turno.getIdContenedor()))
-                        .map(ContenedorResponse::getEstadoGeneral)
-                        .findFirst()
-                        .orElse("NO ENCONTRADO EN PATIO");
+                    .filter(c -> c.getCodigoSigla().equals(turno.getIdContenedor()))
+                    .map(ContenedorResponse::getEstadoGeneral)
+                    .findFirst()
+                    .orElse("NO ENCONTRADO EN PATIO");
             }
 
-            // Arma el DTO que el controller devuelve al frontend.
+            // Buscar el Anden
+            String nombreAnden = "SIN ANDEN ASIGNADO";
+            if (turno.getCodigoAnden() != null) {
+                nombreAnden = todosLosAndenes.stream()
+                    .filter(a -> a.getCodigo().equals(turno.getCodigoAnden()))
+                    .map(AndenResponse::getZona)
+                    .findFirst()
+                    .orElse("ANDEN NO REGISTRADO");
+            }
+
             return DashboardOperacionResponse.builder()
-                    .idTurno(turno.getId())
-                    .patenteCamion(turno.getPatenteCamion())
-                    .horaAgendada(turno.getBloqueInicio())
-                    .tipoOperacion(turno.getTipoOperacion())
-                    .codigoContenedor(turno.getIdContenedor())
-                    .estadoContenedor(estadoContenedorReal)
-                    .build();
-                    
+                .idTurno(turno.getId())
+                .patenteCamion(turno.getPatenteCamion())
+                .horaAgendada(turno.getBloqueInicio())
+                .tipoOperacion(turno.getTipoOperacion())
+                .codigoContenedor(turno.getIdContenedor())
+                .estadoContenedor(estadoContenedorReal)
+                .andenAsignado(nombreAnden)
+                .build();
         }).collect(Collectors.toList());
-    }
 }
