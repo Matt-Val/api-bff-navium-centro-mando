@@ -39,7 +39,7 @@ public class CentroMandoService {
     public List<DashboardOperacionResponse> obtenerTableroPrincipal() {
         List<AgendamientoResponse> agendamientos = agendamientoClient.obtenerTodosLosAgendamientos().join();
         List<ContenedorResponse> todosLosContenedores = contenedoresClient.obtenerTodosLosContenedores().join();
-        List<AndenResponse> todosLosAndenes = andenesClient.obtenerTodosLosAndenes().join();
+        List<AndenResponse> todosLosAndenes = andenesClient.obtenerTodos().join();
 
         return agendamientos.stream().map(turno -> {
 
@@ -73,4 +73,5 @@ public class CentroMandoService {
                 .andenAsignado(nombreAnden)
                 .build();
         }).collect(Collectors.toList());
+    }
 }
