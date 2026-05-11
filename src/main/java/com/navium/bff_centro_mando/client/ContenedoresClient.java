@@ -8,7 +8,13 @@ import org.springframework.beans.factory.annotation.Value;
 
 import com.navium.bff_centro_mando.client.dto.ContenedorResponse;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
+
 // Cliente HTTP que consume el microservicio de contenedores.
 @Component
 public class ContenedoresClient {
@@ -21,12 +27,24 @@ public class ContenedoresClient {
         this.restClient = builder.baseUrl(baseUrl).build();
     }
 
+
+    @CircuitBreaker(name = "servicioContenedores", fallbackMethod = "fallbackObtenerTodosLosContenedores")
+    @TimeLimiter(name = "servicioContenedores", fallbackMethod = "fallbackObtenerTodosLosContenedores")
+
     // Obtiene todos los contenedores desde el microservicio remoto.
-    public List<ContenedorResponse> obtenerTodosLosContenedores() { 
+    public CompletableFuture<List<ContenedorResponse>> obtenerTodosLosContenedores() { 
         // Hace un GET, recibe JSON y lo convierte en una lista tipada.
-        return restClient.get()
+        return CompletableFuture.supplyAsync( () -> 
+            restClient.get()
                 .uri("/api/contenedores")
                 .retrieve()
-                .body(new ParameterizedTypeReference<List<ContenedorResponse>>() {});
+                .body(new ParameterizedTypeReference<List<ContenedorResponse>>() {})
+        );
+    }
+
+    // Método fallback que devuelve una lista vacía si el servicio falla o se demora.
+    public CompletableFuture<List<ContenedorResponse>> fallbackObtenerTodosLosContenedores(Exception e) { 
+        System.out.println("Ms-Contenedores no disponible. Retornando una lista vacía. Error: " + e.getMessage());
+        return CompletableFuture.completedFuture(Collections.emptyList());
     }
 }

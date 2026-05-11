@@ -28,10 +28,10 @@ public class CentroMandoService {
     // Construye la lista de operaciones combinando agendamientos y contenedores.
     public List<DashboardOperacionResponse> obtenerTableroPrincipal() {
         // 1. Llama al ms-agendamiento para obtener turnos.
-        List<AgendamientoResponse> agendamientos = agendamientoClient.obtenerTodosLosAgendamientos();
+        List<AgendamientoResponse> agendamientos = agendamientoClient.obtenerTodosLosAgendamientos().join();
         
         // 2. Llama al ms-contenedores para obtener el estado real.
-        List<ContenedorResponse> todosLosContenedores = contenedoresClient.obtenerTodosLosContenedores();
+        List<ContenedorResponse> todosLosContenedores = contenedoresClient.obtenerTodosLosContenedores().join();
 
         // 3. Mezcla los datos y arma la respuesta del dashboard.
         return agendamientos.stream().map(turno -> {

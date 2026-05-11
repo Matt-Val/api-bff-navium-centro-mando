@@ -1,6 +1,8 @@
 package com.navium.bff_centro_mando.controller;
 import com.navium.bff_centro_mando.service.CentroMandoService;
 import com.navium.bff_centro_mando.web.dto.DashboardOperacionResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -11,6 +13,7 @@ import java.util.List;
 // Controlador REST que expone el endpoint del dashboard.
 @RestController
 @RequestMapping("/api/dashboard")
+@Tag(name = "Dashboard", description = "Operaciones del centro de mando")
 public class DashboardController {
     
     // Servicio de negocio que arma la vista del dashboard.
@@ -23,6 +26,7 @@ public class DashboardController {
 
     // Endpoint principal del dashboard con el estado de las operaciones.
     @GetMapping("/operaciones")
+    @Operation(summary = "Ver tablero", description = "Obtiene el estado de las operaciones del dashboard")
     public ResponseEntity<List<DashboardOperacionResponse>> verTablero() { 
         return ResponseEntity.ok(service.obtenerTableroPrincipal());
     }

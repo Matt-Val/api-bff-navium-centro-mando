@@ -5,9 +5,13 @@ import com.navium.bff_centro_mando.client.dto.AndenResponse;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
-
 import org.springframework.beans.factory.annotation.Value;
+
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 // Cliente HTTP que consume el microservicio de andenes.
 @Component
@@ -23,20 +27,39 @@ public class AndenesClient {
     }
 
     // Obtiene el listado completo de andenes.
-    public List<AndenResponse> obtenerTodos(){ 
+    @CircuitBreaker(name = "servicioAndenes", fallbackMethod = "fallbackObtenerTodos")
+    @TimeLimiter(name = "servicioAndenes", fallbackMethod = "fallbackObtenerTodos")
+    public CompletableFuture<List<AndenResponse>> obtenerTodos() { 
         // Hace un GET, recibe JSON y lo convierte en una lista tipada.
-        return restClient.get()
+        return CompletableFuture.supplyAsync( () -> 
+            restClient.get()
                 .uri("/api/v0/andenes")
                 .retrieve()
-                .body(new ParameterizedTypeReference<List<AndenResponse>>() {} );
+                .body(new ParameterizedTypeReference<List<AndenResponse>>() {} )
+        );
     }
 
-    // Obtiene un anden por su codigo.
-    public AndenResponse obtenerPorCodigo(String codigo) { 
+    // FallBack 1: Si el servicio de andenes falla o se demora, devuelve una lista vacía.
+    public CompletableFuture<List<AndenResponse>> fallbackObtenerTodos(Exception e) { 
+        System.out.println("Ms-Andenes no disponible. Retornando una lista vacía. Error: " + e.getMessage());
+        return CompletableFuture.completedFuture(Collections.emptyList());
+    }
+
+    @CircuitBreaker(name = "servicioAndenes", fallbackMethod = "fallbackObtenerPorCodigo")
+    @TimeLimiter(name = "servicioAndenes", fallbackMethod = "fallbackObtenerPorCodigo")
+    public CompletableFuture<AndenResponse> obtenerPorCodigo(String codigo) { 
         // Hace un GET con el codigo, recibe JSON y lo convierte en un objeto.
-        return restClient.get()
+        return CompletableFuture.supplyAsync( () -> 
+            restClient.get()
                 .uri("/api/v0/andenes/codigo/{codigo}", codigo)
                 .retrieve()
-                .body(AndenResponse.class);
+                .body(AndenResponse.class)
+        );
+    }
+
+    // FallBack 2: El método recibe el parámetro 'codigo' y la excepcion
+    public CompletableFuture<AndenResponse> fallbackObtenerPorCodigo(String codigo, Exception e) { 
+        System.out.println("Ms-Andenes no disponible. No se pudo obtener el anden con codigo: " + codigo + ". Error: " + e.getMessage());
+        return CompletableFuture.completedFuture(new AndenResponse());
     }
 }

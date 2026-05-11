@@ -11,7 +11,7 @@ public class RestClientConfig {
 
     @Bean
     public RestClient.Builder restClientBuilder(JwtPropagationInterceptor jwtInterceptor) { 
-        // Permite crear clientes HTTP personalizados para consumir APIs externas.
+        // Cada vez que se un Client se construya, se le amarra el interceptor de seguridad.
         return RestClient.builder()
             .requestInterceptor(jwtInterceptor);
     }

@@ -1,14 +1,16 @@
 package com.navium.bff_centro_mando.client;
 
 import com.navium.bff_centro_mando.client.dto.AgendamientoResponse;
-
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
 import org.springframework.beans.factory.annotation.Value;
-
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 
 // Cliente HTTP que consume el microservicio de agendamientos.
@@ -24,21 +26,44 @@ public class AgendamientoClient {
         this.restClient = builder.baseUrl(baseUrl).build();
     }
 
+    @CircuitBreaker(name = "servicioAgendamiento", fallbackMethod = "fallbackObtenerTodos")
+    @TimeLimiter(name = "servicioAgendamiento", fallbackMethod = "fallbackObtenerTodos")
     // Obtiene todos los agendamientos desde el microservicio remoto.
-    public List<AgendamientoResponse> obtenerTodosLosAgendamientos() { 
-        // Hace un GET, recibe JSON y lo convierte en una lista tipada.
-        return restClient.get() // GET Request
+    public CompletableFuture<List<AgendamientoResponse>> obtenerTodosLosAgendamientos() { 
+        // Envolvemos la respuesta en un CompletableFuture para que sea asíncrona
+        return CompletableFuture.supplyAsync( () ->
+            restClient.get() // GET Request
                 .uri("/api/agendamientos") 
                 .retrieve() // Ejecuta la petición
-                .body(new ParameterizedTypeReference<List<AgendamientoResponse>>() {}); // Convierte la respuesta a una lista de AgendamientoResponse
+                .body(new ParameterizedTypeReference<List<AgendamientoResponse>>() {}) // Convierte la respuesta a una lista de AgendamientoResponse
+        );
+    }
+
+    // Fallback 1: Si falla el obtenerTodos
+    public CompletableFuture<List<AgendamientoResponse>> fallbackObtenerTodos(Exception e) { 
+        System.out.println("Ms-Agendamiento no disponible. Retornando lista vacía. Error: " + e.getMessage());
+        // Se mostrará una lista vacía en el dashboard, pero el sistema seguirá funcionando.
+        return CompletableFuture.completedFuture(Collections.emptyList());
     }
 
     // Obtiene un agendamiento por id desde el microservicio remoto.
-    public AgendamientoResponse obtenerAgendamientoPorId(Long id) { 
+    @CircuitBreaker(name = "servicioAgendamiento", fallbackMethod = "fallbackObtenerPorId")
+    @TimeLimiter(name = "servicioAgendamiento", fallbackMethod = "fallbackObtenerPorId")
+    public CompletableFuture<AgendamientoResponse> obtenerAgendamientoPorId(Long id) { 
         // Hace un GET con un id, recibe JSON y lo convierte en un objeto.
-        return restClient.get()
+        return CompletableFuture.supplyAsync( () -> 
+            restClient.get()
                 .uri("/api/agendamientos/{id}", id)
                 .retrieve()
-                .body(AgendamientoResponse.class);
+                .body(AgendamientoResponse.class)
+        );
+    }
+
+    // Fallback 2: Si falla el obtenerPorId
+    public CompletableFuture<AgendamientoResponse> fallbackObtenerPorId(Long id, Exception e) { 
+        System.out.println("Ms-Agendamiento no disponible. No se pudo obtener el agendamiento con ID: " + id + ". Error: " + e.getMessage());
+        // Retornamos un objeto vacío para que la interfaz pueda manejarlo sin romperse.
+        return CompletableFuture.completedFuture(new AgendamientoResponse());
     }
 }
+
