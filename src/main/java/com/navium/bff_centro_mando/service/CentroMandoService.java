@@ -43,24 +43,27 @@ public class CentroMandoService {
 
         return agendamientos.stream().map(turno -> {
 
-            // Busca el contenedor
-            String estadoContenedorReal = "DESCONOCIDO";
+            // 1. Lógica del Contenedor
+            // Buscamos si existe información adicional del contenedor en el ms-contenedores
+            String estadoContenedorReal = "NO ENCONTRADO EN PATIO";
             if (turno.getIdContenedor() != null) {
                 estadoContenedorReal = todosLosContenedores.stream()
-                    .filter(c -> c.getCodigoSigla().equals(turno.getIdContenedor()))
+                    .filter(c -> c.getCodigoSigla().equalsIgnoreCase(turno.getIdContenedor()))
                     .map(ContenedorResponse::getEstadoGeneral)
                     .findFirst()
                     .orElse("NO ENCONTRADO EN PATIO");
             }
 
-            // Buscar el Anden
-            String nombreAnden = "SIN ANDEN ASIGNADO";
+            // 2. Lógica del Andén
+            // Si el agendamiento tiene un código, lo mostramos. Si además existe en el ms-andenes, agregamos la zona.
+            String nombreAnden = (turno.getCodigoAnden() != null) ? turno.getCodigoAnden() : "SIN ANDEN ASIGNADO";
             if (turno.getCodigoAnden() != null) {
-                nombreAnden = todosLosAndenes.stream()
-                    .filter(a -> a.getCodigo().equals(turno.getCodigoAnden()))
-                    .map(AndenResponse::getZona)
+                String infoExtraAnden = todosLosAndenes.stream()
+                    .filter(a -> a.getCodigo().equalsIgnoreCase(turno.getCodigoAnden()))
+                    .map(a -> " (Zona " + a.getZona() + ")")
                     .findFirst()
-                    .orElse("ANDEN NO REGISTRADO");
+                    .orElse("");
+                nombreAnden += infoExtraAnden;
             }
 
             return DashboardOperacionResponse.builder()
@@ -68,7 +71,7 @@ public class CentroMandoService {
                 .patenteCamion(turno.getPatenteCamion())
                 .horaAgendada(turno.getHoraInicio())
                 .tipoOperacion(turno.getTipoOperacion())
-                .codigoContenedor(turno.getIdContenedor())
+                .codigoContenedor(turno.getIdContenedor() != null ? turno.getIdContenedor() : "--")
                 .estadoContenedor(estadoContenedorReal)
                 .andenAsignado(nombreAnden)
                 .build();

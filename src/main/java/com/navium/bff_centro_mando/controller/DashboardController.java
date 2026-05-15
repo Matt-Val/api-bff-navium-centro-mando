@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-// Controlador REST que expone el endpoint del dashboard.
+
 @RestController
 @RequestMapping("/api/dashboard")
 @Tag(name = "Dashboard", description = "Operaciones del centro de mando")
