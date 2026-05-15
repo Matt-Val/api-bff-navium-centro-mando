@@ -4,7 +4,6 @@ import com.navium.bff_centro_mando.client.dto.AgendamientoResponse;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -30,13 +29,21 @@ public class AgendamientoClient {
     @TimeLimiter(name = "servicioAgendamiento", fallbackMethod = "fallbackObtenerTodos")
     // Obtiene todos los agendamientos desde el microservicio remoto.
     public CompletableFuture<List<AgendamientoResponse>> obtenerTodosLosAgendamientos() { 
+        // Capturamos el contexto de la peticion principal (que contiene el Token)
+        var attributes = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
         // Envolvemos la respuesta en un CompletableFuture para que sea asíncrona
-        return CompletableFuture.supplyAsync( () ->
-            restClient.get() // GET Request
-                .uri("/api/agendamientos") 
-                .retrieve() // Ejecuta la petición
-                .body(new ParameterizedTypeReference<List<AgendamientoResponse>>() {}) // Convierte la respuesta a una lista de AgendamientoResponse
-        );
+        return CompletableFuture.supplyAsync( () -> {
+            // Le pasamos el contexto al nuevo hilo
+            org.springframework.web.context.request.RequestContextHolder.setRequestAttributes(attributes);
+            try {
+                return restClient.get() // GET Request
+                    .uri("/api/agendamientos") 
+                    .retrieve() // Ejecuta la petición
+                    .body(new org.springframework.core.ParameterizedTypeReference<List<AgendamientoResponse>>() {}); // Convierte la respuesta
+            } finally {
+                org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes();
+            }
+        });
     }
 
     // Fallback 1: Si falla el obtenerTodos
@@ -50,13 +57,19 @@ public class AgendamientoClient {
     @CircuitBreaker(name = "servicioAgendamiento", fallbackMethod = "fallbackObtenerPorId")
     @TimeLimiter(name = "servicioAgendamiento", fallbackMethod = "fallbackObtenerPorId")
     public CompletableFuture<AgendamientoResponse> obtenerAgendamientoPorId(Long id) { 
+        var attributes = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
         // Hace un GET con un id, recibe JSON y lo convierte en un objeto.
-        return CompletableFuture.supplyAsync( () -> 
-            restClient.get()
-                .uri("/api/agendamientos/{id}", id)
-                .retrieve()
-                .body(AgendamientoResponse.class)
-        );
+        return CompletableFuture.supplyAsync( () -> {
+            org.springframework.web.context.request.RequestContextHolder.setRequestAttributes(attributes);
+            try {
+                return restClient.get()
+                    .uri("/api/agendamientos/{id}", id)
+                    .retrieve()
+                    .body(AgendamientoResponse.class);
+            } finally {
+                org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes();
+            }
+        });
     }
 
     // Fallback 2: Si falla el obtenerPorId

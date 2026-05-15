@@ -66,7 +66,7 @@ public class CentroMandoService {
             return DashboardOperacionResponse.builder()
                 .idTurno(turno.getId())
                 .patenteCamion(turno.getPatenteCamion())
-                .horaAgendada(turno.getBloqueInicio())
+                .horaAgendada(turno.getHoraInicio())
                 .tipoOperacion(turno.getTipoOperacion())
                 .codigoContenedor(turno.getIdContenedor())
                 .estadoContenedor(estadoContenedorReal)

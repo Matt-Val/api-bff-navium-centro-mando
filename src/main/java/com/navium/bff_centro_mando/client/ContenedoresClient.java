@@ -33,13 +33,19 @@ public class ContenedoresClient {
 
     // Obtiene todos los contenedores desde el microservicio remoto.
     public CompletableFuture<List<ContenedorResponse>> obtenerTodosLosContenedores() { 
+        var attributes = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
         // Hace un GET, recibe JSON y lo convierte en una lista tipada.
-        return CompletableFuture.supplyAsync( () -> 
-            restClient.get()
-                .uri("/api/contenedores")
-                .retrieve()
-                .body(new ParameterizedTypeReference<List<ContenedorResponse>>() {})
-        );
+        return CompletableFuture.supplyAsync( () -> {
+            org.springframework.web.context.request.RequestContextHolder.setRequestAttributes(attributes);
+            try {
+                return restClient.get()
+                    .uri("/api/contenedores")
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<List<ContenedorResponse>>() {});
+            } finally {
+                org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes();
+            }
+        });
     }
 
     // Método fallback que devuelve una lista vacía si el servicio falla o se demora.

@@ -14,10 +14,10 @@ public class AgendamientoResponse {
     private String rutChofer;
     private String idContenedor;
     private String codigoAnden;
-    private LocalDateTime bloqueInicio;
+    private LocalDateTime horaInicio;
     private LocalDateTime bloqueFin;
 
     // Nota: los enums se reciben como string para evitar acoplarse a enums de otros microservicios.
     private String tipoOperacion; // Se pasa a string
-    private String estado; // Se pasa a string
+    private String estadoAgendamiento; // Se pasa a string
 }

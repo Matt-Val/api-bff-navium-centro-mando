@@ -30,13 +30,19 @@ public class AndenesClient {
     @CircuitBreaker(name = "servicioAndenes", fallbackMethod = "fallbackObtenerTodos")
     @TimeLimiter(name = "servicioAndenes", fallbackMethod = "fallbackObtenerTodos")
     public CompletableFuture<List<AndenResponse>> obtenerTodos() { 
+        var attributes = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
         // Hace un GET, recibe JSON y lo convierte en una lista tipada.
-        return CompletableFuture.supplyAsync( () -> 
-            restClient.get()
-                .uri("/api/v0/andenes")
-                .retrieve()
-                .body(new ParameterizedTypeReference<List<AndenResponse>>() {} )
-        );
+        return CompletableFuture.supplyAsync( () -> {
+            org.springframework.web.context.request.RequestContextHolder.setRequestAttributes(attributes);
+            try {
+                return restClient.get()
+                    .uri("/api/v0/andenes")
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<List<AndenResponse>>() {} );
+            } finally {
+                org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes();
+            }
+        });
     }
 
     // FallBack 1: Si el servicio de andenes falla o se demora, devuelve una lista vacía.
@@ -48,13 +54,19 @@ public class AndenesClient {
     @CircuitBreaker(name = "servicioAndenes", fallbackMethod = "fallbackObtenerPorCodigo")
     @TimeLimiter(name = "servicioAndenes", fallbackMethod = "fallbackObtenerPorCodigo")
     public CompletableFuture<AndenResponse> obtenerPorCodigo(String codigo) { 
+        var attributes = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
         // Hace un GET con el codigo, recibe JSON y lo convierte en un objeto.
-        return CompletableFuture.supplyAsync( () -> 
-            restClient.get()
-                .uri("/api/v0/andenes/codigo/{codigo}", codigo)
-                .retrieve()
-                .body(AndenResponse.class)
-        );
+        return CompletableFuture.supplyAsync( () -> {
+            org.springframework.web.context.request.RequestContextHolder.setRequestAttributes(attributes);
+            try {
+                return restClient.get()
+                    .uri("/api/v0/andenes/codigo/{codigo}", codigo)
+                    .retrieve()
+                    .body(AndenResponse.class);
+            } finally {
+                org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes();
+            }
+        });
     }
 
     // FallBack 2: El método recibe el parámetro 'codigo' y la excepcion
