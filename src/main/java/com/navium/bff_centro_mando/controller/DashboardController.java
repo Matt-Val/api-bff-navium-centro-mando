@@ -1,12 +1,13 @@
 package com.navium.bff_centro_mando.controller;
 import com.navium.bff_centro_mando.service.CentroMandoService;
+import com.navium.bff_centro_mando.web.dto.AndenVistaResponse;
 import com.navium.bff_centro_mando.web.dto.DashboardOperacionResponse;
+import com.navium.bff_centro_mando.web.dto.DocumentoRevisionResponse;
+import com.navium.bff_centro_mando.web.dto.EstadisticasDashboardResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -29,5 +30,32 @@ public class DashboardController {
     @Operation(summary = "Ver tablero", description = "Obtiene el estado de las operaciones del dashboard")
     public ResponseEntity<List<DashboardOperacionResponse>> verTablero() { 
         return ResponseEntity.ok(service.obtenerTableroPrincipal());
+    }
+
+    @GetMapping("/mapa-andenes")
+    @Operation(summary = "Ver mapa de andenes", description = "Obtiene la disposición espacial de los andenes y su ocupación")
+    public ResponseEntity<List<AndenVistaResponse>> verMapa() {
+        return ResponseEntity.ok(service.obtenerMapaAndenes());
+    }
+
+    @GetMapping("/estadisticas")
+    @Operation(summary = "Ver estadísticas", description = "Obtiene métricas agregadas para gráficos")
+    public ResponseEntity<EstadisticasDashboardResponse> verEstadisticas() {
+        return ResponseEntity.ok(service.obtenerEstadisticas());
+    }
+
+    @GetMapping("/documentos/pendientes")
+    @Operation(summary = "Documentos pendientes", description = "Lista documentos que requieren revisión manual")
+    public ResponseEntity<List<DocumentoRevisionResponse>> verDocumentos() {
+        return ResponseEntity.ok(service.obtenerDocumentosPendientes());
+    }
+
+    @PostMapping("/documentos/{idContenedor}/revisar")
+    @Operation(summary = "Revisar documento", description = "Aprueba o rechaza la documentación de un contenedor")
+    public ResponseEntity<String> revisarDocumento(
+            @PathVariable String idContenedor,
+            @RequestParam String estado) {
+        // Lógica simulada de aprobación
+        return ResponseEntity.ok("Estado del contenedor " + idContenedor + " actualizado a " + estado);
     }
 }
