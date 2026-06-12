@@ -36,7 +36,20 @@ public class JwtPropagationInterceptor  implements ClientHttpRequestInterceptor 
             // Extrae el token de la cabecera Authorization.
             String authorizationHeader = servletRequest.getHeader("Authorization");
 
-            //Si existe el header, propagarlo a la request del microservicio
+            // Si no hay header, intentamos extraer el token de la cookie
+            if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+                jakarta.servlet.http.Cookie[] cookies = servletRequest.getCookies();
+                if (cookies != null) {
+                    for (jakarta.servlet.http.Cookie cookie : cookies) {
+                        if ("token".equals(cookie.getName())) {
+                            authorizationHeader = "Bearer " + cookie.getValue();
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Si existe el token (vía header o cookie), propagarlo a la request del microservicio
             if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) { 
                 request.getHeaders().add("Authorization", authorizationHeader);
             }
