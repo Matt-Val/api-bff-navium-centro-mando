@@ -1,6 +1,7 @@
 package com.navium.bff_centro_mando.client;
 
 
+import com.navium.bff_centro_mando.client.dto.AndenOcupacionResponse;
 import com.navium.bff_centro_mando.client.dto.AndenResponse;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
@@ -47,7 +48,6 @@ public class AndenesClient {
 
     // FallBack 1: Si el servicio de andenes falla o se demora, devuelve una lista vacía.
     public CompletableFuture<List<AndenResponse>> fallbackObtenerTodos(Exception e) { 
-        System.out.println("Ms-Andenes no disponible. Retornando una lista vacía. Error: " + e.getMessage());
         return CompletableFuture.completedFuture(Collections.emptyList());
     }
 
@@ -69,9 +69,30 @@ public class AndenesClient {
         });
     }
 
-    // FallBack 2: El método recibe el parámetro 'codigo' y la excepcion
+// FallBack 2: El método recibe el parámetro 'codigo' y la excepcion
     public CompletableFuture<AndenResponse> fallbackObtenerPorCodigo(String codigo, Exception e) { 
-        System.out.println("Ms-Andenes no disponible. No se pudo obtener el anden con codigo: " + codigo + ". Error: " + e.getMessage());
         return CompletableFuture.completedFuture(new AndenResponse());
     }
+
+    @CircuitBreaker(name = "servicioAndenes", fallbackMethod = "fallbackObtenerOcupaciones")
+    @TimeLimiter(name = "servicioAndenes", fallbackMethod = "fallbackObtenerOcupaciones")
+    public CompletableFuture<List<AndenOcupacionResponse>> obtenerOcupacionesActivas() { 
+        var attributes = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+        return CompletableFuture.supplyAsync( () -> {
+            org.springframework.web.context.request.RequestContextHolder.setRequestAttributes(attributes);
+            try {
+                return restClient.get()
+                    .uri("/api/v0/andenes/asignacion")
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<List<AndenOcupacionResponse>>() {});
+            } finally {
+                org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes();
+            }
+        });
+    }
+
+    public CompletableFuture<List<AndenOcupacionResponse>> fallbackObtenerOcupaciones(Exception e) { 
+        return CompletableFuture.completedFuture(Collections.emptyList());
+    }
 }
+

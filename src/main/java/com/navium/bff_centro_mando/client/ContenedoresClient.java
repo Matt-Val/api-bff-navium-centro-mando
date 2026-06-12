@@ -49,8 +49,32 @@ public class ContenedoresClient {
     }
 
     // Método fallback que devuelve una lista vacía si el servicio falla o se demora.
-    public CompletableFuture<List<ContenedorResponse>> fallbackObtenerTodosLosContenedores(Exception e) { 
-        System.out.println("Ms-Contenedores no disponible. Retornando una lista vacía. Error: " + e.getMessage());
+    public CompletableFuture<List<ContenedorResponse>> fallbackObtenerTodosLosContenedores(Exception e) {
         return CompletableFuture.completedFuture(Collections.emptyList());
+    }
+
+    @CircuitBreaker(name = "servicioContenedores", fallbackMethod = "fallbackActualizarEstado")
+    @TimeLimiter(name = "servicioContenedores", fallbackMethod = "fallbackActualizarEstado")
+    public CompletableFuture<Void> actualizarEstado(Long id, String estadoBL, String estadoTATC) {
+        var attributes = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+        return CompletableFuture.runAsync(() -> {
+            org.springframework.web.context.request.RequestContextHolder.setRequestAttributes(attributes);
+            try {
+                restClient.put()
+                    .uri(uriBuilder -> uriBuilder
+                        .path("/api/contenedores/{id}/estado")
+                        .queryParam("estadoBL", estadoBL)
+                        .queryParam("estadoTATC", estadoTATC)
+                        .build(id))
+                    .retrieve()
+                    .toBodilessEntity();
+            } finally {
+                org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes();
+            }
+        });
+    }
+
+    public CompletableFuture<Void> fallbackActualizarEstado(Long id, String estadoBL, String estadoTATC, Exception e) {
+        throw new RuntimeException("No se pudo actualizar el estado legal en el microservicio: " + e.getMessage());
     }
 }

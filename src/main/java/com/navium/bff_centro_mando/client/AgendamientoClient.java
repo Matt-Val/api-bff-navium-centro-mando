@@ -1,5 +1,6 @@
 package com.navium.bff_centro_mando.client;
 
+import com.navium.bff_centro_mando.client.dto.AgendamientoRequest;
 import com.navium.bff_centro_mando.client.dto.AgendamientoResponse;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
@@ -27,19 +28,15 @@ public class AgendamientoClient {
 
     @CircuitBreaker(name = "servicioAgendamiento", fallbackMethod = "fallbackObtenerTodos")
     @TimeLimiter(name = "servicioAgendamiento", fallbackMethod = "fallbackObtenerTodos")
-    // Obtiene todos los agendamientos desde el microservicio remoto.
     public CompletableFuture<List<AgendamientoResponse>> obtenerTodosLosAgendamientos() { 
-        // Capturamos el contexto de la peticion principal (que contiene el Token)
         var attributes = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
-        // Envolvemos la respuesta en un CompletableFuture para que sea asíncrona
         return CompletableFuture.supplyAsync( () -> {
-            // Le pasamos el contexto al nuevo hilo
             org.springframework.web.context.request.RequestContextHolder.setRequestAttributes(attributes);
             try {
-                return restClient.get() // GET Request
+                return restClient.get()
                     .uri("/api/agendamientos") 
-                    .retrieve() // Ejecuta la petición
-                    .body(new org.springframework.core.ParameterizedTypeReference<List<AgendamientoResponse>>() {}); // Convierte la respuesta
+                    .retrieve()
+                    .body(new org.springframework.core.ParameterizedTypeReference<List<AgendamientoResponse>>() {});
             } finally {
                 org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes();
             }
@@ -48,7 +45,6 @@ public class AgendamientoClient {
 
     // Fallback 1: Si falla el obtenerTodos
     public CompletableFuture<List<AgendamientoResponse>> fallbackObtenerTodos(Exception e) { 
-        System.out.println("Ms-Agendamiento no disponible. Retornando lista vacía. Error: " + e.getMessage());
         // Se mostrará una lista vacía en el dashboard, pero el sistema seguirá funcionando.
         return CompletableFuture.completedFuture(Collections.emptyList());
     }
@@ -74,7 +70,6 @@ public class AgendamientoClient {
 
     // Fallback 2: Si falla el obtenerPorId
     public CompletableFuture<AgendamientoResponse> fallbackObtenerPorId(Long id, Exception e) { 
-        System.out.println("Ms-Agendamiento no disponible. No se pudo obtener el agendamiento con ID: " + id + ". Error: " + e.getMessage());
         // Retornamos un objeto vacío para que la interfaz pueda manejarlo sin romperse.
         return CompletableFuture.completedFuture(new AgendamientoResponse());
     }

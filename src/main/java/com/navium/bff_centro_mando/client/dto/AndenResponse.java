@@ -13,7 +13,6 @@ public class AndenResponse {
     private int numero;
     // Codigo unico del anden.
     private String codigo;
-
     // Recibimos los enums como string para mantener el desacoplamiento entre microservicios.
     private String tipo; // Se pasa a string
     private String estado; // Se pasa a string
