@@ -3,16 +3,19 @@ package com.navium.bff_centro_mando.service;
 import com.navium.bff_centro_mando.client.AgendamientoClient;
 import com.navium.bff_centro_mando.client.AndenesClient;
 import com.navium.bff_centro_mando.client.ContenedoresClient;
+import com.navium.bff_centro_mando.client.UsuarioClient;
+import com.navium.bff_centro_mando.client.dto.AgendamientoRequest;
 import com.navium.bff_centro_mando.client.dto.AgendamientoResponse;
+import com.navium.bff_centro_mando.client.dto.AndenOcupacionResponse;
 import com.navium.bff_centro_mando.client.dto.AndenResponse;
 import com.navium.bff_centro_mando.client.dto.ContenedorResponse;
+import com.navium.bff_centro_mando.client.dto.UsuarioRequest;
+import com.navium.bff_centro_mando.client.dto.UsuarioResponse;
 import com.navium.bff_centro_mando.web.dto.DashboardOperacionResponse;
 import com.navium.bff_centro_mando.web.dto.AndenVistaResponse;
-import com.navium.bff_centro_mando.web.dto.DocumentoRevisionResponse;
 import com.navium.bff_centro_mando.web.dto.EstadisticasDashboardResponse;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -27,16 +30,20 @@ public class CentroMandoService {
     private final ContenedoresClient contenedoresClient;
     // Cliente para obtener andenes.
     private final AndenesClient andenesClient;
+    // Cliente para gestionar usuarios.
+    private final UsuarioClient usuarioClient;
 
 
     // Inyecta los clientes necesarios para construir la vista del dashboard.
     public CentroMandoService(
-        AgendamientoClient agendamientoClient, 
+        AgendamientoClient agendamientoClient,
         ContenedoresClient contenedoresClient,
-        AndenesClient andenesClient) { 
+        AndenesClient andenesClient,
+        UsuarioClient usuarioClient) {
             this.agendamientoClient = agendamientoClient;
             this.contenedoresClient = contenedoresClient;
             this.andenesClient = andenesClient;
+            this.usuarioClient = usuarioClient;
     }
 
 
@@ -44,31 +51,23 @@ public class CentroMandoService {
     public List<DashboardOperacionResponse> obtenerTableroPrincipal() {
         List<AgendamientoResponse> agendamientos = agendamientoClient.obtenerTodosLosAgendamientos().join();
         List<ContenedorResponse> todosLosContenedores = contenedoresClient.obtenerTodosLosContenedores().join();
-        List<AndenResponse> todosLosAndenes = andenesClient.obtenerTodos().join();
 
         return agendamientos.stream().map(turno -> {
 
             // 1. Lógica del Contenedor
-            // Buscamos si existe información adicional del contenedor en el ms-contenedores
             String estadoContenedorReal = "NO ENCONTRADO EN PATIO";
-            if (turno.getIdContenedor() != null) {
-                estadoContenedorReal = todosLosContenedores.stream()
-                    .filter(c -> c.getCodigoSigla().equalsIgnoreCase(turno.getIdContenedor()))
-                    .map(ContenedorResponse::getEstadoGeneral)
-                    .findFirst()
-                    .orElse("NO ENCONTRADO EN PATIO");
-            }
+            String codigoContenedorReal = "--";
 
-            // 2. Lógica del Andén
-            // Si el agendamiento tiene un código, lo mostramos. Si además existe en el ms-andenes, agregamos la zona.
-            String nombreAnden = (turno.getCodigoAnden() != null) ? turno.getCodigoAnden() : "SIN ANDEN ASIGNADO";
-            if (turno.getCodigoAnden() != null) {
-                String infoExtraAnden = todosLosAndenes.stream()
-                    .filter(a -> a.getCodigo().equalsIgnoreCase(turno.getCodigoAnden()))
-                    .map(a -> " (Zona " + a.getZona() + ")")
+            if (turno.getIdContenedor() != null) {
+                ContenedorResponse contenedorEncontrado = todosLosContenedores.stream()
+                    .filter(c -> c.getId() != null && c.getId().toString().equals(turno.getIdContenedor()))
                     .findFirst()
-                    .orElse("");
-                nombreAnden += infoExtraAnden;
+                    .orElse(null);
+
+                if (contenedorEncontrado != null) {
+                    estadoContenedorReal = contenedorEncontrado.getEstadoGeneral();
+                    codigoContenedorReal = contenedorEncontrado.getCodigoSigla();
+                }
             }
 
             return DashboardOperacionResponse.builder()
@@ -76,9 +75,9 @@ public class CentroMandoService {
                 .patenteCamion(turno.getPatenteCamion())
                 .horaAgendada(turno.getHoraInicio())
                 .tipoOperacion(turno.getTipoOperacion())
-                .codigoContenedor(turno.getIdContenedor() != null ? turno.getIdContenedor() : "--")
+                .codigoContenedor(codigoContenedorReal)
                 .estadoContenedor(estadoContenedorReal)
-                .andenAsignado(nombreAnden)
+                .andenAsignado("SIN ANDEN ASIGNADO")
                 .build();
         }).collect(Collectors.toList());
     }
@@ -88,14 +87,23 @@ public class CentroMandoService {
      */
     public List<AndenVistaResponse> obtenerMapaAndenes() {
         List<AndenResponse> andenes = andenesClient.obtenerTodos().join();
-        List<AgendamientoResponse> agendamientos = agendamientoClient.obtenerTodosLosAgendamientos().join();
+        List<AndenOcupacionResponse> ocupaciones = andenesClient.obtenerOcupacionesActivas().join();
+        List<ContenedorResponse> todosLosContenedores = contenedoresClient.obtenerTodosLosContenedores().join();
 
         return andenes.stream().map(anden -> {
-            // Buscamos si hay un agendamiento activo asociado a este andén
-            AgendamientoResponse ocupante = agendamientos.stream()
-                .filter(ag -> anden.getCodigo().equalsIgnoreCase(ag.getCodigoAnden()))
+            AndenOcupacionResponse ocupacion = ocupaciones.stream()
+                .filter(o -> o.getCodigo() != null && o.getCodigo().equalsIgnoreCase(anden.getCodigo()))
                 .findFirst()
                 .orElse(null);
+
+            String codigoContenedor = null;
+            if (ocupacion != null && ocupacion.getContenedorId() != null) {
+                codigoContenedor = todosLosContenedores.stream()
+                    .filter(c -> c.getId() != null && c.getId().equals(ocupacion.getContenedorId()))
+                    .map(ContenedorResponse::getCodigoSigla)
+                    .findFirst()
+                    .orElse(ocupacion.getContenedorId().toString());
+            }
 
             return AndenVistaResponse.builder()
                 .id(anden.getId())
@@ -105,8 +113,8 @@ public class CentroMandoService {
                 .tipo(anden.getTipo())
                 .estado(anden.getEstado())
                 .sector(anden.getSector())
-                .patenteOcupante(ocupante != null ? ocupante.getPatenteCamion() : null)
-                .contenedorOcupante(ocupante != null ? ocupante.getIdContenedor() : null)
+                .patenteOcupante(ocupacion != null ? ocupacion.getPatenteTransporte() : null)
+                .contenedorOcupante(codigoContenedor)
                 .build();
         }).collect(Collectors.toList());
     }
@@ -135,24 +143,24 @@ public class CentroMandoService {
             .build();
     }
 
-    /**
-     * Simula la obtención de documentos que requieren revisión manual del centro de mando.
-     */
-    public List<DocumentoRevisionResponse> obtenerDocumentosPendientes() {
-        // En una implementación real, esto consultaría un microservicio de documentos o persistencia local del BFF.
-        // Simulamos algunos datos basados en agendamientos existentes.
-        List<AgendamientoResponse> agendamientos = agendamientoClient.obtenerTodosLosAgendamientos().join();
-        
-        return agendamientos.stream()
-            .filter(a -> a.getIdContenedor() != null)
-            .limit(5) // Solo mostramos los primeros 5 para revisión
-            .map(a -> DocumentoRevisionResponse.builder()
-                .idContenedor(a.getIdContenedor())
-                .patenteCamion(a.getPatenteCamion())
-                .tipoDocumento("BL / TATC")
-                .estadoRevision("PENDIENTE")
-                .fechaSubida(a.getHoraInicio().toString())
-                .build())
-            .collect(Collectors.toList());
+    public List<UsuarioResponse> listarUsuarios() {
+        return usuarioClient.listarTodos().join();
+    }
+
+    public UsuarioResponse crearUsuario(UsuarioRequest request) {
+        return usuarioClient.crearUsuario(request).join();
+    }
+
+    public UsuarioResponse actualizarUsuario(Long id, UsuarioRequest request) {
+        return usuarioClient.actualizarUsuario(id, request).join();
+    }
+
+    public void desactivarUsuario(Long id) {
+        usuarioClient.desactivarUsuario(id).join();
+    }
+
+    public void activarUsuario(Long id) {
+        usuarioClient.activarUsuario(id).join();
     }
 }
+
