@@ -11,5 +11,4 @@ public class BffCentroMandoApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(BffCentroMandoApplication.class, args);
 	}
-
 }
