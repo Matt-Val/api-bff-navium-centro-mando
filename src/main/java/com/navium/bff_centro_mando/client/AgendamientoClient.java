@@ -1,6 +1,5 @@
 package com.navium.bff_centro_mando.client;
 
-import com.navium.bff_centro_mando.client.dto.AgendamientoRequest;
 import com.navium.bff_centro_mando.client.dto.AgendamientoResponse;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
