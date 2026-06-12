@@ -1,6 +1,4 @@
 package com.navium.bff_centro_mando.controller;
-import com.navium.bff_centro_mando.client.dto.AgendamientoRequest;
-import com.navium.bff_centro_mando.client.dto.AgendamientoResponse;
 import com.navium.bff_centro_mando.client.dto.UsuarioRequest;
 import com.navium.bff_centro_mando.client.dto.UsuarioResponse;
 import com.navium.bff_centro_mando.service.CentroMandoService;

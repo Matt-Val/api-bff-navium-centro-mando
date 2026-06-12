@@ -4,7 +4,6 @@ import com.navium.bff_centro_mando.client.AgendamientoClient;
 import com.navium.bff_centro_mando.client.AndenesClient;
 import com.navium.bff_centro_mando.client.ContenedoresClient;
 import com.navium.bff_centro_mando.client.UsuarioClient;
-import com.navium.bff_centro_mando.client.dto.AgendamientoRequest;
 import com.navium.bff_centro_mando.client.dto.AgendamientoResponse;
 import com.navium.bff_centro_mando.client.dto.AndenOcupacionResponse;
 import com.navium.bff_centro_mando.client.dto.AndenResponse;
