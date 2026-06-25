@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  api-bff:
+    image: ${DOCKER_USERNAME}/api-bff:latest
+    container_name: navium-api-bff
+    ports:
+      - "8084:8084" 
+    environment:
+      - WEB_URL=${WEB_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - API_CONTENEDORES_URL=${API_CONTENEDORES_URL}
+      - API_AGENDAMIENTOS_URL=${API_AGENDAMIENTOS_URL}
+      - API_ANDENES_URL=${API_ANDENES_URL}
+      - API_USUARIOS_URL=${API_USUARIOS_URL}
+    restart: always
